@@ -56,7 +56,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://learncicd-illia-tereshchuk-001.azurewebsites.net
+      url: https://learncicd-illia-tereshchuk-001-fqa4fqefapgwbuac.polandcentral-01.azurewebsites.net/weatherforecast
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4

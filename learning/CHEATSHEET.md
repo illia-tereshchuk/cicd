@@ -156,7 +156,7 @@ runs-on: ${{ matrix.os }}
 ```yaml
 - uses: azure/webapps-deploy@v3
   with:
-    app-name: <твій-app>
+    app-name: learncicd-illia-tereshchuk-001
     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
     package: ./publish
 ```
@@ -164,6 +164,12 @@ runs-on: ${{ matrix.os }}
 ⚠️ **Граблі:**
 - За реверс-проксі App Service `app.UseHttpsRedirection()` дає цикл редіректів → тримай його лише для Development, а HTTPS вмикай тумблером **HTTPS Only** у порталі.
 - Порожній корінь `/` віддає 404 — тестуй конкретний ендпоінт (`/weatherforecast`).
+- **Реальний URL бери з порталу, не вигадуй.** Azure тепер дає **унікальне доменне ім'я** з випадковим токеном + регіоном (захист від subdomain takeover), а не просте `<app>.azurewebsites.net`. Шукай його в **Overview → Default domain**. Формат: `https://<app>-<токен>.<регіон>-01.azurewebsites.net`.
+
+  Живий приклад цього проєкту:
+  ```
+  https://learncicd-illia-tereshchuk-001-fqa4fqefapgwbuac.polandcentral-01.azurewebsites.net/weatherforecast
+  ```
 
 ## 11. Корисні команди
 
