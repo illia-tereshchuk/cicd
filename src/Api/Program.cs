@@ -10,9 +10,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // Локально редіректимо HTTP -> HTTPS. У проді (Azure App Service) HTTPS
+    // забезпечує сама платформа (тумблер "HTTPS Only"), а app-рівневий редірект
+    // за реверс-проксі дає цикл редіректів — тому тут лише для Development.
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 
 var summaries = new[]
 {
@@ -35,7 +37,7 @@ app.MapGet("/weatherforecast", () =>
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }

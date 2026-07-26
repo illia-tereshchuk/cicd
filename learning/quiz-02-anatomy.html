@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квіз · Розділ 2 — Анатомія workflow</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6470;
+    --line:#e3e7ec; --brand:#2f6fed; --brand-ink:#fff;
+    --ok:#1a7f4b; --ok-bg:#e7f6ee; --bad:#c02626; --bad-bg:#fdeaea;
+    --chip:#eef1f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b2;
+      --line:#262c34; --brand:#5b8bff; --brand-ink:#0b0e12;
+      --ok:#4fd08a; --ok-bg:#12301f; --bad:#ff7b7b; --bad-bg:#331515;
+      --chip:#222833;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:24px 16px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  header{margin-bottom:20px}
+  .kicker{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:700}
+  h1{font-size:26px;margin:6px 0 4px}
+  .sub{color:var(--muted);margin:0}
+  .bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:18px 0 6px}
+  .bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .barlabel{font-size:13px;color:var(--muted)}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;margin:16px 0;
+     box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .qnum{font-size:13px;color:var(--muted);font-weight:600}
+  .qtext{font-weight:650;margin:4px 0 14px;font-size:17px}
+  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:.92em}
+  .opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;
+    background:var(--card);border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 13px;margin:8px 0;cursor:pointer;color:var(--ink);font:inherit;transition:.15s}
+  .opt:hover:not(:disabled){border-color:var(--brand)}
+  .opt:disabled{cursor:default}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--line);
+    display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+  .opt.correct .mk{border-color:var(--ok);background:var(--ok);color:#fff}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .mk{border-color:var(--bad);background:var(--bad);color:#fff}
+  .explain{font-size:14.5px;color:var(--muted);background:var(--chip);border-radius:10px;
+    padding:10px 13px;margin:6px 0 14px;display:none}
+  .explain.show{display:block}
+  .explain b{color:var(--ink)}
+  .result{position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;margin-top:20px;box-shadow:0 6px 20px rgba(0,0,0,.10);
+    display:none}
+  .result.show{display:block}
+  .result h2{margin:0 0 4px;font-size:20px}
+  .result p{margin:0;color:var(--muted)}
+  .score{font-size:34px;font-weight:800;color:var(--brand)}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Розділ 2 · Квіз</div>
+    <h1>Анатомія workflow-файлу</h1>
+    <p class="sub">8 питань · обери один варіант · пояснення з'явиться одразу</p>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="barlabel"><span id="answered">0</span>/8 відповіли · правильних: <span id="correct">0</span></div>
+  </header>
+  <main id="quiz"></main>
+  <div class="result" id="result">
+    <div class="score"><span id="finalScore">0</span>/8</div>
+    <h2 id="verdict"></h2>
+    <p id="advice"></p>
+  </div>
+  <footer>learning/quiz-02-anatomy.html · курс CI/CD для .NET</footer>
+</div>
+<script>
+const QUESTIONS = [
+  {
+    q: "Чим у YAML позначається вкладеність (структура) елементів?",
+    opts: ["Відступами з пробілів (таби заборонені)", "Крапкою з комою в кінці рядка",
+           "Фігурними дужками { }", "Відступи не мають значення"],
+    correct: 0,
+    ex: "YAML — це <b>відступи пробілами</b>. Таби ламають файл, а зайвий/недостатній пробіл зміщує елемент на інший рівень. Це головна причина «загадкових» помилок у новачків."
+  },
+  {
+    q: "У `pull_request: branches: [ main ]` — яку гілку фільтрує `branches`?",
+    opts: ["Цільову (базову) гілку PR — workflow біжить, коли PR спрямований у main",
+           "Гілку, з якої створено PR (source)",
+           "Абсолютно всі гілки репозиторію",
+           "Гілку, в яку відбудеться деплой"],
+    correct: 0,
+    ex: "Для <code>pull_request</code> фільтр — це <b>база</b> (куди зливаємо), а не source (звідки). Тобто перевіряється кожен PR, що цілиться в <code>main</code>, незалежно від назви робочої гілки."
+  },
+  {
+    q: "У блоці `jobs:` ключ `build:` — що це таке?",
+    opts: ["Ідентифікатор job-а, який ти вигадуєш сам (довільна назва)",
+           "Зарезервоване ключове слово GitHub Actions",
+           "Команда, що запускає компіляцію",
+           "Назва runner-а"],
+    correct: 0,
+    ex: "<b>build</b> — це просто id job-а, який обираєш ти. Міг би бути <code>ci</code>, <code>test</code>, будь-що. На інші jobs потім посилаються цим id через <code>needs:</code>."
+  },
+  {
+    q: "Якщо у workflow кілька jobs і між ними немає `needs:`, вони...",
+    opts: ["Виконуються паралельно (одночасно)",
+           "Виконуються строго послідовно згори вниз",
+           "Виконуються у випадковому порядку по черзі",
+           "Не запускаються взагалі"],
+    correct: 0,
+    ex: "Jobs за замовчуванням <b>паралельні</b> — кожен на своєму окремому runner-і. Щоб змусити job Б чекати job А, додають <code>needs: A</code>."
+  },
+  {
+    q: "А кроки (`steps`) всередині одного job?",
+    opts: ["Виконуються послідовно й ділять одну файлову систему runner-а",
+           "Виконуються паралельно між собою",
+           "Кожен крок стартує на новому runner-і",
+           "Не мають доступу до склонованого коду"],
+    correct: 0,
+    ex: "Кроки — <b>послідовні</b> й на <b>спільній ФС</b>. Саме тому checkout → setup → restore → build працює ланцюжком: те, що зробив попередній крок, бачить наступний. Якщо крок падає — решту пропускають."
+  },
+  {
+    q: "Що означає `@v4` у `uses: actions/checkout@v4`?",
+    opts: ["Версію (тег) action, яку ти закріплюєш",
+           "Кількість повторних спроб при помилці",
+           "Номер runner-а",
+           "Версію .NET SDK"],
+    correct: 0,
+    ex: "<b>@v4</b> — це закріплення версії action. Можна вказати тег (<code>@v4</code>), гілку або конкретний SHA-коміт. Пін версії захищає від несподіваних змін у чужому коді."
+  },
+  {
+    q: "Навіщо в кроці «Setup .NET» блок `with: dotnet-version: '10.0.x'`?",
+    opts: ["Передає вхідні параметри в action (тут — яку версію .NET ставити)",
+           "Оголошує змінні середовища для всього job",
+           "Вказує, який крок буде наступним",
+           "Задає таймаут виконання"],
+    correct: 0,
+    ex: "<b>with:</b> — це входи (inputs) конкретної action. <code>10.0.x</code> у лапках = рядок, а <code>.x</code> означає «остання патч-версія лінійки 10.0»."
+  },
+  {
+    q: "Чому в кроці Build стоїть `dotnet build --no-restore`?",
+    opts: ["Бо restore вже виконав попередній крок — повторювати зайве",
+           "Щоб узагалі пропустити компіляцію",
+           "Щоб не встановлювати .NET SDK",
+           "Щоб вимкнути юніт-тести"],
+    correct: 0,
+    ex: "Restore (завантаження NuGet-пакетів) уже відпрацював окремим кроком. <b>--no-restore</b> каже build-у не робити цього вдруге — швидше і чіткіший поділ кроків. Ще там <code>--configuration Release</code> — оптимізована збірка."
+  }
+];
+
+const quiz = document.getElementById('quiz');
+let answered = 0, correct = 0;
+
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+QUESTIONS.forEach((item, qi) => {
+  const card = document.createElement('div');
+  card.className = 'q';
+  card.innerHTML = `<div class="qnum">Питання ${qi+1} з ${QUESTIONS.length}</div>
+                    <div class="qtext">${item.q}</div>`;
+  const letters = ['A','B','C','D'];
+  const options = shuffle(item.opts.map((text, i) => ({text, correct: i === item.correct})));
+  options.forEach((opt, oi) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.dataset.correct = opt.correct ? "1" : "0";
+    btn.innerHTML = `<span class="mk">${letters[oi]}</span><span>${opt.text}</span>`;
+    btn.onclick = () => choose(card, opt.correct, btn);
+    card.appendChild(btn);
+  });
+  const ex = document.createElement('div');
+  ex.className = 'explain';
+  ex.innerHTML = item.ex;
+  card.appendChild(ex);
+  quiz.appendChild(card);
+});
+
+function choose(card, isCorrect, btn){
+  if (card.dataset.done) return;
+  card.dataset.done = "1";
+  answered++;
+  const buttons = card.querySelectorAll('.opt');
+  buttons.forEach(b => {
+    b.disabled = true;
+    if (b.dataset.correct === "1") b.classList.add('correct');
+  });
+  if (isCorrect){ correct++; }
+  else { btn.classList.add('wrong'); }
+  card.querySelector('.explain').classList.add('show');
+  update();
+}
+
+function update(){
+  document.getElementById('answered').textContent = answered;
+  document.getElementById('correct').textContent = correct;
+  document.getElementById('fill').style.width = (answered/QUESTIONS.length*100)+'%';
+  if (answered === QUESTIONS.length) finish();
+}
+
+function finish(){
+  const r = document.getElementById('result');
+  document.getElementById('finalScore').textContent = correct;
+  let verdict, advice;
+  if (correct === 8){ verdict = "Ідеально! 🎯"; advice = "Ти читаєш workflow як книжку. Далі — Розділ 3: build-пайплайн і кешування NuGet."; }
+  else if (correct >= 6){ verdict = "Дуже добре! 👍"; advice = "Структуру засвоїв. Переглянь пояснення до пропущених і рушаємо в Розділ 3."; }
+  else if (correct >= 4){ verdict = "Непогано, повтори 📘"; advice = "Перечитай розбір ci.yml із чату, звертаючи увагу на jobs vs steps."; }
+  else { verdict = "Варто перечитати розділ 🔁"; advice = "Анатомія — фундамент. Пробіжись по розбору файлу ще раз і перепройди квіз."; }
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('advice').textContent = advice;
+  r.classList.add('show');
+  r.scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
+</body>
+</html>

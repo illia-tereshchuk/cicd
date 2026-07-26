@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квіз · Розділ 7 — Best practices</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6470;
+    --line:#e3e7ec; --brand:#2f6fed; --brand-ink:#fff;
+    --ok:#1a7f4b; --ok-bg:#e7f6ee; --bad:#c02626; --bad-bg:#fdeaea;
+    --chip:#eef1f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b2;
+      --line:#262c34; --brand:#5b8bff; --brand-ink:#0b0e12;
+      --ok:#4fd08a; --ok-bg:#12301f; --bad:#ff7b7b; --bad-bg:#331515;
+      --chip:#222833;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:24px 16px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  header{margin-bottom:20px}
+  .kicker{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:700}
+  h1{font-size:26px;margin:6px 0 4px}
+  .sub{color:var(--muted);margin:0}
+  .bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:18px 0 6px}
+  .bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .barlabel{font-size:13px;color:var(--muted)}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;margin:16px 0;
+     box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .qnum{font-size:13px;color:var(--muted);font-weight:600}
+  .qtext{font-weight:650;margin:4px 0 14px;font-size:17px}
+  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:.92em}
+  .opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;
+    background:var(--card);border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 13px;margin:8px 0;cursor:pointer;color:var(--ink);font:inherit;transition:.15s}
+  .opt:hover:not(:disabled){border-color:var(--brand)}
+  .opt:disabled{cursor:default}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--line);
+    display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+  .opt.correct .mk{border-color:var(--ok);background:var(--ok);color:#fff}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .mk{border-color:var(--bad);background:var(--bad);color:#fff}
+  .explain{font-size:14.5px;color:var(--muted);background:var(--chip);border-radius:10px;
+    padding:10px 13px;margin:6px 0 14px;display:none}
+  .explain.show{display:block}
+  .explain b{color:var(--ink)}
+  .result{position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;margin-top:20px;box-shadow:0 6px 20px rgba(0,0,0,.10);
+    display:none}
+  .result.show{display:block}
+  .result h2{margin:0 0 4px;font-size:20px}
+  .result p{margin:0;color:var(--muted)}
+  .score{font-size:34px;font-weight:800;color:var(--brand)}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Розділ 7 · Квіз (фінальний)</div>
+    <h1>Best practices CI/CD</h1>
+    <p class="sub">8 питань · обери один варіант · пояснення з'явиться одразу</p>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="barlabel"><span id="answered">0</span>/8 відповіли · правильних: <span id="correct">0</span></div>
+  </header>
+  <main id="quiz"></main>
+  <div class="result" id="result">
+    <div class="score"><span id="finalScore">0</span>/8</div>
+    <h2 id="verdict"></h2>
+    <p id="advice"></p>
+  </div>
+  <footer>learning/quiz-07-best-practices.html · курс CI/CD для .NET</footer>
+</div>
+<script>
+const QUESTIONS = [
+  {
+    q: "Що дає «branch protection» з «required status checks» на гілці main?",
+    opts: ["Забороняє мердж, поки CI не пройде (і, за налаштуванням, поки нема рев'ю)",
+           "Автоматично деплоїть main у продакшн",
+           "Видаляє злиті гілки після мерджу",
+           "Пришвидшує збірку проєкту"],
+    correct: 0,
+    ex: "Саме це перетворює CI з «інформаційного» на <b>обов'язковий бар'єр</b>: поламаний код фізично не влити в main. Налаштовується в Settings → Branches."
+  },
+  {
+    q: "Чому працюють через Pull Request, а не пушать прямо в main?",
+    opts: ["Щоб кожна зміна пройшла CI і рев'ю перед потраплянням у головну гілку",
+           "Бо технічно push у main неможливий у принципі",
+           "Щоб не доводилось писати тести",
+           "Бо PR завантажується на runner швидше за push"],
+    correct: 0,
+    ex: "PR — це <b>точка контролю</b>: на ньому спрацьовує CI, відбувається рев'ю, і лише зелена + схвалена зміна зливається. Прямий push у main обходить усі перевірки."
+  },
+  {
+    q: "Найбезпечніший спосіб автентифікації CI у хмарі (Azure/AWS)?",
+    opts: ["OIDC — короткоживучі токени замість збережених вічних секретів",
+           "Записати пароль прямо в yaml-файл",
+           "Один спільний пароль на всю команду в README",
+           "Взагалі не автентифікуватись"],
+    correct: 0,
+    ex: "<b>OIDC</b> дає токен на кілька хвилин під конкретний прогін — нічого довготривалого не зберігається. Це безпечніше за секрет-пароль, який може «протекти» й діяти вічно."
+  },
+  {
+    q: "Навіщо пінити версії actions (`@v4`) і вмикати Dependabot?",
+    opts: ["Захист ланцюга постачання: контрольовані оновлення й менший ризик підміни чужого коду",
+           "Щоб зробити workflow коротшим",
+           "Бо YAML вимагає версію обов'язково",
+           "Щоб вимкнути кешування"],
+    correct: 0,
+    ex: "Ти виконуєш чужий код (actions) і тягнеш чужі пакети. Пін версій + <b>Dependabot</b> (авто-PR на оновлення) дають контроль і вчасні патчі безпеки, а не сліпе «завжди останнє»."
+  },
+  {
+    q: "Що робить `concurrency` з `cancel-in-progress: true`?",
+    opts: ["Скасовує попередній незавершений прогін тієї ж групи, коли стартує новий",
+           "Запускає всі job-и строго послідовно",
+           "Кешує NuGet-пакети між прогонами",
+           "Створює matrix-комбінації"],
+    correct: 0,
+    ex: "Зручно для гілок фіч: запушив новий коміт — старий прогін скасовується, не марнує runner-хвилини. Для деплою навпаки ставлять <code>cancel-in-progress: false</code>, щоб не переривати."
+  },
+  {
+    q: "Попередження `NU1903` під час build означає, що...",
+    opts: ["Використовується NuGet-пакет із відомою вразливістю безпеки",
+           "У коді є синтаксична помилка",
+           "У проєкті відсутні тести",
+           "Використано застарілу версію YAML"],
+    correct: 0,
+    ex: "<b>NU1903</b> — це попередження про <b>вразливий пакет</b> (у твоєму проєкті — транзитивний Microsoft.OpenApi). CI ловить не лише баги, а й діри безпеки в залежностях."
+  },
+  {
+    q: "Як «перебити» вразливу транзитивну залежність на пропатчену версію?",
+    opts: ["Додати прямий PackageReference на безпечну версію цього пакета",
+           "Видалити всі тести з проєкту",
+           "Змінити runner на windows-latest",
+           "Просто закоментувати попередження"],
+    correct: 0,
+    ex: "Прямий <code>&lt;PackageReference&gt;</code> на пропатчену версію має вищий пріоритет за транзитивну й «підмінює» вразливу. Саме це ми зробимо руками як практику з безпеки."
+  },
+  {
+    q: "Навіщо ставити `timeout-minutes` на job?",
+    opts: ["Щоб «завислий» job не крутився вічно й не з'їдав ліміт CI-хвилин",
+           "Щоб пришвидшити виконання тестів",
+           "Щоб задати версію .NET SDK",
+           "Щоб артефакт зберігався довше"],
+    correct: 0,
+    ex: "Інколи крок зависає (мережа, дедлок). <b>timeout-minutes</b> — запобіжник: job гаситься за розумний час замість того, щоб годинами палити безкоштовні хвилини."
+  }
+];
+
+const quiz = document.getElementById('quiz');
+let answered = 0, correct = 0;
+
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+QUESTIONS.forEach((item, qi) => {
+  const card = document.createElement('div');
+  card.className = 'q';
+  card.innerHTML = `<div class="qnum">Питання ${qi+1} з ${QUESTIONS.length}</div>
+                    <div class="qtext">${item.q}</div>`;
+  const letters = ['A','B','C','D'];
+  const options = shuffle(item.opts.map((text, i) => ({text, correct: i === item.correct})));
+  options.forEach((opt, oi) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.dataset.correct = opt.correct ? "1" : "0";
+    btn.innerHTML = `<span class="mk">${letters[oi]}</span><span>${opt.text}</span>`;
+    btn.onclick = () => choose(card, opt.correct, btn);
+    card.appendChild(btn);
+  });
+  const ex = document.createElement('div');
+  ex.className = 'explain';
+  ex.innerHTML = item.ex;
+  card.appendChild(ex);
+  quiz.appendChild(card);
+});
+
+function choose(card, isCorrect, btn){
+  if (card.dataset.done) return;
+  card.dataset.done = "1";
+  answered++;
+  const buttons = card.querySelectorAll('.opt');
+  buttons.forEach(b => {
+    b.disabled = true;
+    if (b.dataset.correct === "1") b.classList.add('correct');
+  });
+  if (isCorrect){ correct++; }
+  else { btn.classList.add('wrong'); }
+  card.querySelector('.explain').classList.add('show');
+  update();
+}
+
+function update(){
+  document.getElementById('answered').textContent = answered;
+  document.getElementById('correct').textContent = correct;
+  document.getElementById('fill').style.width = (answered/QUESTIONS.length*100)+'%';
+  if (answered === QUESTIONS.length) finish();
+}
+
+function finish(){
+  const r = document.getElementById('result');
+  document.getElementById('finalScore').textContent = correct;
+  let verdict, advice;
+  if (correct === 8){ verdict = "Ідеально! 🏁🎯"; advice = "Ти пройшов увесь курс CI/CD! Далі — деплой на Azure і фінальний cheatsheet."; }
+  else if (correct >= 6){ verdict = "Дуже добре! 👍"; advice = "Best practices засвоєно. Глянь пропущені пояснення — і до Azure-деплою."; }
+  else if (correct >= 4){ verdict = "Непогано, повтори 📘"; advice = "Перечитай про branch protection, secrets-безпеку і concurrency."; }
+  else { verdict = "Варто перечитати розділ 🔁"; advice = "Це найважливіші звички зрілого CI/CD. Пробіжись по теорії ще раз."; }
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('advice').textContent = advice;
+  r.classList.add('show');
+  r.scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
+</body>
+</html>

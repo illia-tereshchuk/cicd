@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квіз · Розділ 3 — Build-пайплайн .NET</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6470;
+    --line:#e3e7ec; --brand:#2f6fed; --brand-ink:#fff;
+    --ok:#1a7f4b; --ok-bg:#e7f6ee; --bad:#c02626; --bad-bg:#fdeaea;
+    --chip:#eef1f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b2;
+      --line:#262c34; --brand:#5b8bff; --brand-ink:#0b0e12;
+      --ok:#4fd08a; --ok-bg:#12301f; --bad:#ff7b7b; --bad-bg:#331515;
+      --chip:#222833;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:24px 16px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  header{margin-bottom:20px}
+  .kicker{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:700}
+  h1{font-size:26px;margin:6px 0 4px}
+  .sub{color:var(--muted);margin:0}
+  .bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:18px 0 6px}
+  .bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .barlabel{font-size:13px;color:var(--muted)}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;margin:16px 0;
+     box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .qnum{font-size:13px;color:var(--muted);font-weight:600}
+  .qtext{font-weight:650;margin:4px 0 14px;font-size:17px}
+  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:.92em}
+  .opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;
+    background:var(--card);border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 13px;margin:8px 0;cursor:pointer;color:var(--ink);font:inherit;transition:.15s}
+  .opt:hover:not(:disabled){border-color:var(--brand)}
+  .opt:disabled{cursor:default}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--line);
+    display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+  .opt.correct .mk{border-color:var(--ok);background:var(--ok);color:#fff}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .mk{border-color:var(--bad);background:var(--bad);color:#fff}
+  .explain{font-size:14.5px;color:var(--muted);background:var(--chip);border-radius:10px;
+    padding:10px 13px;margin:6px 0 14px;display:none}
+  .explain.show{display:block}
+  .explain b{color:var(--ink)}
+  .result{position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;margin-top:20px;box-shadow:0 6px 20px rgba(0,0,0,.10);
+    display:none}
+  .result.show{display:block}
+  .result h2{margin:0 0 4px;font-size:20px}
+  .result p{margin:0;color:var(--muted)}
+  .score{font-size:34px;font-weight:800;color:var(--brand)}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Розділ 3 · Квіз</div>
+    <h1>Build-пайплайн для .NET</h1>
+    <p class="sub">8 питань · обери один варіант · пояснення з'явиться одразу</p>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="barlabel"><span id="answered">0</span>/8 відповіли · правильних: <span id="correct">0</span></div>
+  </header>
+  <main id="quiz"></main>
+  <div class="result" id="result">
+    <div class="score"><span id="finalScore">0</span>/8</div>
+    <h2 id="verdict"></h2>
+    <p id="advice"></p>
+  </div>
+  <footer>learning/quiz-03-build-pipeline.html · курс CI/CD для .NET</footer>
+</div>
+<script>
+const QUESTIONS = [
+  {
+    q: "Що робить команда `dotnet restore`?",
+    opts: ["Завантажує NuGet-пакети, від яких залежить проєкт",
+           "Компілює код у .dll",
+           "Запускає юніт-тести",
+           "Публікує застосунок для деплою"],
+    correct: 0,
+    ex: "<b>restore</b> читає залежності з .csproj і тягне NuGet-пакети в глобальну папку (<code>~/.nuget/packages</code>), а також формує <code>obj/project.assets.json</code>. Це підготовка перед компіляцією."
+  },
+  {
+    q: "Що по суті робить `dotnet build`?",
+    opts: ["Компілює вихідний код у збірки (.dll) у папці bin/",
+           "Лише завантажує пакети",
+           "Форматує код за стилем",
+           "Створює git-коміт зі змінами"],
+    correct: 0,
+    ex: "<b>build</b> перетворює твій C#-код на IL-збірки (.dll/.exe) у <code>bin/</code>. За замовчуванням він ще й сам робить restore — якщо не сказати <code>--no-restore</code>."
+  },
+  {
+    q: "Чим Release-конфігурація відрізняється від Debug?",
+    opts: ["Release — оптимізована збірка «як у прод»; Debug — для розробки й налагодження",
+           "Release повністю вимикає тести",
+           "Debug працює швидше в проді",
+           "Різниці немає, тільки назва папки"],
+    correct: 0,
+    ex: "<b>Release</b> вмикає оптимізації компілятора й не тягне зайвого дебаг-обвісу — це те, що ти релізиш. <b>Debug</b> (типове) зручніше для розробки. У CI білдимо/тестуємо в тій самій конфігурації."
+  },
+  {
+    q: "Навіщо до `dotnet build` додають прапорець `--no-restore`?",
+    opts: ["Restore вже виконали окремим попереднім кроком — не робимо його вдруге",
+           "Щоб зовсім пропустити компіляцію",
+           "Щоб зібрати без встановленого .NET SDK",
+           "Щоб вимкнути оптимізації Release"],
+    correct: 0,
+    ex: "Оскільки крок Restore уже відпрацював, <b>--no-restore</b> прибирає повторну роботу. Важливо: тоді restore МАЄ стояти раніше в пайплайні, інакше build не знайде пакетів."
+  },
+  {
+    q: "Яку головну проблему розв'язує кешування NuGet у CI?",
+    opts: ["Кожен запуск наново тягне ті самі пакети з інтернету — це повільно й крихко",
+           "Без кешу не запускаються тести",
+           "Кеш замінює компіляцію коду",
+           "Без кешу не працює checkout"],
+    correct: 0,
+    ex: "Runner щоразу чистий, тож без кешу CI заново качає всі NuGet-пакети — хвилини на кожен запуск. Кеш зберігає їх між запусками й різко пришвидшує пайплайн."
+  },
+  {
+    q: "Яку саме папку зазвичай кешують для .NET у GitHub Actions?",
+    opts: ["Глобальну папку NuGet-пакетів (~/.nuget/packages)",
+           "Папку bin/ зі скомпільованими .dll",
+           "Увесь вихідний код репозиторію",
+           "Папку з лог-файлами"],
+    correct: 0,
+    ex: "Кешують <b>~/.nuget/packages</b> — саме туди restore складає завантажені пакети. Кешувати bin/ немає сенсу: його щоразу перезбирають зі свіжого коду."
+  },
+  {
+    q: "Навіщо в `actions/cache` ключ (`key`) будують через `hashFiles(...)`?",
+    opts: ["Щоб кеш автоматично оновлювався, коли змінюються залежності (хеш .csproj/lock-файлів зміниться)",
+           "Щоб зашифрувати вміст кешу",
+           "Щоб задати назву job-а",
+           "Щоб вибрати операційну систему runner-а"],
+    correct: 0,
+    ex: "Ключ = «відбиток» залежностей. Поки .csproj/lock не змінилися — хеш той самий, кеш підходить (cache hit). Змінив залежності — хеш новий, кеш перезбереться. <code>restore-keys</code> дає запасний частковий збіг."
+  },
+  {
+    q: "Що дає `dotnet test --no-build`?",
+    opts: ["Використати вже зібраний раніше результат замість повторної збірки",
+           "Пропустити самі тести",
+           "Не завантажувати NuGet-пакети",
+           "Примусово зібрати в Debug"],
+    correct: 0,
+    ex: "Якщо build уже відпрацював окремим кроком, <b>--no-build</b> (разом із <code>--no-restore</code>) каже test-у не перезбирати проєкт — лише прогнати тести. Швидше й без дублювання роботи."
+  }
+];
+
+const quiz = document.getElementById('quiz');
+let answered = 0, correct = 0;
+
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+QUESTIONS.forEach((item, qi) => {
+  const card = document.createElement('div');
+  card.className = 'q';
+  card.innerHTML = `<div class="qnum">Питання ${qi+1} з ${QUESTIONS.length}</div>
+                    <div class="qtext">${item.q}</div>`;
+  const letters = ['A','B','C','D'];
+  const options = shuffle(item.opts.map((text, i) => ({text, correct: i === item.correct})));
+  options.forEach((opt, oi) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.dataset.correct = opt.correct ? "1" : "0";
+    btn.innerHTML = `<span class="mk">${letters[oi]}</span><span>${opt.text}</span>`;
+    btn.onclick = () => choose(card, opt.correct, btn);
+    card.appendChild(btn);
+  });
+  const ex = document.createElement('div');
+  ex.className = 'explain';
+  ex.innerHTML = item.ex;
+  card.appendChild(ex);
+  quiz.appendChild(card);
+});
+
+function choose(card, isCorrect, btn){
+  if (card.dataset.done) return;
+  card.dataset.done = "1";
+  answered++;
+  const buttons = card.querySelectorAll('.opt');
+  buttons.forEach(b => {
+    b.disabled = true;
+    if (b.dataset.correct === "1") b.classList.add('correct');
+  });
+  if (isCorrect){ correct++; }
+  else { btn.classList.add('wrong'); }
+  card.querySelector('.explain').classList.add('show');
+  update();
+}
+
+function update(){
+  document.getElementById('answered').textContent = answered;
+  document.getElementById('correct').textContent = correct;
+  document.getElementById('fill').style.width = (answered/QUESTIONS.length*100)+'%';
+  if (answered === QUESTIONS.length) finish();
+}
+
+function finish(){
+  const r = document.getElementById('result');
+  document.getElementById('finalScore').textContent = correct;
+  let verdict, advice;
+  if (correct === 8){ verdict = "Ідеально! 🎯"; advice = "Пайплайн у тебе в кишені. Далі — Розділ 4: додаємо справжні тести (xUnit) у CI."; }
+  else if (correct >= 6){ verdict = "Дуже добре! 👍"; advice = "Механіку build/restore засвоїв. Глянь пропущені пояснення і рушаємо в Розділ 4."; }
+  else if (correct >= 4){ verdict = "Непогано, повтори 📘"; advice = "Перечитай про restore→build→test і кешування, тоді перепройди."; }
+  else { verdict = "Варто перечитати розділ 🔁"; advice = "Ці команди — щоденний хліб CI. Пробіжись по теорії ще раз."; }
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('advice').textContent = advice;
+  r.classList.add('show');
+  r.scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
+</body>
+</html>

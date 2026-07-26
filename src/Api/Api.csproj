@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- Прямий пін перебиває вразливий транзитивний Microsoft.OpenApi 2.0.0
+         (NU1903 / GHSA-v5pm-xwqc-g5wc). Лишаємось у межах major 2.x задля сумісності. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
   </ItemGroup>
 
 </Project>

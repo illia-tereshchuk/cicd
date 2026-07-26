@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квіз · Розділ 5 — Артефакти й публікація</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6470;
+    --line:#e3e7ec; --brand:#2f6fed; --brand-ink:#fff;
+    --ok:#1a7f4b; --ok-bg:#e7f6ee; --bad:#c02626; --bad-bg:#fdeaea;
+    --chip:#eef1f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b2;
+      --line:#262c34; --brand:#5b8bff; --brand-ink:#0b0e12;
+      --ok:#4fd08a; --ok-bg:#12301f; --bad:#ff7b7b; --bad-bg:#331515;
+      --chip:#222833;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:24px 16px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  header{margin-bottom:20px}
+  .kicker{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:700}
+  h1{font-size:26px;margin:6px 0 4px}
+  .sub{color:var(--muted);margin:0}
+  .bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:18px 0 6px}
+  .bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .barlabel{font-size:13px;color:var(--muted)}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;margin:16px 0;
+     box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .qnum{font-size:13px;color:var(--muted);font-weight:600}
+  .qtext{font-weight:650;margin:4px 0 14px;font-size:17px}
+  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:.92em}
+  .opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;
+    background:var(--card);border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 13px;margin:8px 0;cursor:pointer;color:var(--ink);font:inherit;transition:.15s}
+  .opt:hover:not(:disabled){border-color:var(--brand)}
+  .opt:disabled{cursor:default}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--line);
+    display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+  .opt.correct .mk{border-color:var(--ok);background:var(--ok);color:#fff}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .mk{border-color:var(--bad);background:var(--bad);color:#fff}
+  .explain{font-size:14.5px;color:var(--muted);background:var(--chip);border-radius:10px;
+    padding:10px 13px;margin:6px 0 14px;display:none}
+  .explain.show{display:block}
+  .explain b{color:var(--ink)}
+  .result{position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;margin-top:20px;box-shadow:0 6px 20px rgba(0,0,0,.10);
+    display:none}
+  .result.show{display:block}
+  .result h2{margin:0 0 4px;font-size:20px}
+  .result p{margin:0;color:var(--muted)}
+  .score{font-size:34px;font-weight:800;color:var(--brand)}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Розділ 5 · Квіз</div>
+    <h1>Артефакти й публікація</h1>
+    <p class="sub">8 питань · обери один варіант · пояснення з'явиться одразу</p>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="barlabel"><span id="answered">0</span>/8 відповіли · правильних: <span id="correct">0</span></div>
+  </header>
+  <main id="quiz"></main>
+  <div class="result" id="result">
+    <div class="score"><span id="finalScore">0</span>/8</div>
+    <h2 id="verdict"></h2>
+    <p id="advice"></p>
+  </div>
+  <footer>learning/quiz-05-artifacts.html · курс CI/CD для .NET</footer>
+</div>
+<script>
+const QUESTIONS = [
+  {
+    q: "Чим `dotnet publish` відрізняється від `dotnet build`?",
+    opts: ["publish готує самодостатній набір файлів, готовий до розгортання; build лише компілює",
+           "Різниці немає, це синоніми",
+           "publish запускає юніт-тести",
+           "build одразу деплоїть на сервер"],
+    correct: 0,
+    ex: "<b>build</b> компілює в bin/ для розробки. <b>publish</b> збирає застосунок разом із залежностями в акуратну папку (<code>-o ./publish</code>), яку можна взяти й задеплоїти."
+  },
+  {
+    q: "Що таке «артефакт» (artifact) у контексті CI?",
+    opts: ["Файл або папка, збережені з прогону workflow — їх можна завантажити або передати між job-ами",
+           "Помилка компіляції",
+           "Різновид runner-а",
+           "Секретна змінна оточення"],
+    correct: 0,
+    ex: "<b>Артефакт</b> — це навмисний вихідний результат прогону (напр. папка publish, лог, .zip). Він з'являється на сторінці запуску, його можна скачати або передати іншому job-у."
+  },
+  {
+    q: "Навіщо ЗБЕРІГАТИ артефакт зі збіркою, а не білдити заново перед деплоєм?",
+    opts: ["Щоб задеплоїти рівно той бінарник, що пройшов тести — без ризику «іншої» збірки",
+           "Щоб зекономити місце на диску",
+           "Без артефактів код не компілюється",
+           "Щоб можна було пропустити тести"],
+    correct: 0,
+    ex: "Золоте правило: <b>build once, deploy the same</b>. Артефакт фіксує саме перевірений бінарник. Перезбірка перед деплоєм = ризик задеплоїти щось інше, ніж тестували."
+  },
+  {
+    q: "Чим артефакт відрізняється від кешу (`actions/cache`)?",
+    opts: ["Артефакт — свідомий результат, який зберігають/завантажують; кеш — прозора оптимізація швидкості (напр. NuGet-пакети)",
+           "Це одне й те саме, різні назви",
+           "Кеш можна завантажити, а артефакт — ні",
+           "Артефакт пришвидшує білд, а кеш — ні"],
+    correct: 0,
+    ex: "<b>Кеш</b> — щоб пайплайн був швидшим (пакети між запусками), він «невидимий». <b>Артефакт</b> — це те, що ти навмисно виносиш назовні як результат: скачати, переглянути, задеплоїти."
+  },
+  {
+    q: "Різниця між framework-dependent і self-contained публікацією?",
+    opts: ["self-contained тягне з собою .NET-рантайм і працює без встановленого .NET; framework-dependent потребує рантайму на цільовій машині",
+           "Різниці немає",
+           "framework-dependent завжди більший за розміром",
+           "self-contained не можна нікуди задеплоїти"],
+    correct: 0,
+    ex: "<b>framework-dependent</b> (типове) — легше, але на сервері має бути .NET. <b>self-contained</b> (<code>--self-contained -r linux-x64</code>) — везе рантайм із собою, запуститься будь-де, зате важчий."
+  },
+  {
+    q: "Що таке RID (напр. `linux-x64`, `win-x64`, `osx-arm64`)?",
+    opts: ["Runtime Identifier — цільова платформа й архітектура для публікації",
+           "ID репозиторію на GitHub",
+           "Версія .NET SDK",
+           "Номер прогону workflow"],
+    correct: 0,
+    ex: "<b>RID</b> = Runtime Identifier. Каже, під яку ОС/архітектуру пакувати self-contained застосунок: <code>linux-x64</code>, <code>win-x64</code>, <code>osx-arm64</code> тощо."
+  },
+  {
+    q: "Щоб окремий job деплою отримав артефакт від job збірки, потрібно...",
+    opts: ["Оголосити залежність через `needs:` і завантажити артефакт через `download-artifact`",
+           "Нічого — артефакти доступні в усіх job-ах автоматично",
+           "Скопіювати файли між job-ами вручну через scp",
+           "Покласти їх у кеш"],
+    correct: 0,
+    ex: "Jobs ізольовані (різні runner-и). Тому: job-білд робить <b>upload-artifact</b>, job-деплой ставить <b>needs: build</b> і робить <b>download-artifact</b>. Так перевірений бінарник переїжджає далі."
+  },
+  {
+    q: "Що описує SemVer у форматі MAJOR.MINOR.PATCH (напр. 2.3.1)?",
+    opts: ["Схему версіонування: несумісні зміни / нові сумісні фічі / виправлення багів",
+           "Розмір артефакту в мегабайтах",
+           "Час, витрачений на збірку",
+           "Кількість тестів у проєкті"],
+    correct: 0,
+    ex: "<b>SemVer</b>: піднімаєш MAJOR — зламав сумісність; MINOR — додав фічу без злому; PATCH — виправив баг. У CI версію задають через <code>-p:Version=</code> або <code>&lt;Version&gt;</code> у .csproj, часто з <code>github.run_number</code>."
+  }
+];
+
+const quiz = document.getElementById('quiz');
+let answered = 0, correct = 0;
+
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+QUESTIONS.forEach((item, qi) => {
+  const card = document.createElement('div');
+  card.className = 'q';
+  card.innerHTML = `<div class="qnum">Питання ${qi+1} з ${QUESTIONS.length}</div>
+                    <div class="qtext">${item.q}</div>`;
+  const letters = ['A','B','C','D'];
+  const options = shuffle(item.opts.map((text, i) => ({text, correct: i === item.correct})));
+  options.forEach((opt, oi) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.dataset.correct = opt.correct ? "1" : "0";
+    btn.innerHTML = `<span class="mk">${letters[oi]}</span><span>${opt.text}</span>`;
+    btn.onclick = () => choose(card, opt.correct, btn);
+    card.appendChild(btn);
+  });
+  const ex = document.createElement('div');
+  ex.className = 'explain';
+  ex.innerHTML = item.ex;
+  card.appendChild(ex);
+  quiz.appendChild(card);
+});
+
+function choose(card, isCorrect, btn){
+  if (card.dataset.done) return;
+  card.dataset.done = "1";
+  answered++;
+  const buttons = card.querySelectorAll('.opt');
+  buttons.forEach(b => {
+    b.disabled = true;
+    if (b.dataset.correct === "1") b.classList.add('correct');
+  });
+  if (isCorrect){ correct++; }
+  else { btn.classList.add('wrong'); }
+  card.querySelector('.explain').classList.add('show');
+  update();
+}
+
+function update(){
+  document.getElementById('answered').textContent = answered;
+  document.getElementById('correct').textContent = correct;
+  document.getElementById('fill').style.width = (answered/QUESTIONS.length*100)+'%';
+  if (answered === QUESTIONS.length) finish();
+}
+
+function finish(){
+  const r = document.getElementById('result');
+  document.getElementById('finalScore').textContent = correct;
+  let verdict, advice;
+  if (correct === 8){ verdict = "Ідеально! 🎯"; advice = "Ти вже вмієш пакувати продукт. Далі — Розділ 6: CD, деплой, secrets і environments."; }
+  else if (correct >= 6){ verdict = "Дуже добре! 👍"; advice = "Суть publish/artifact ясна. Глянь пропущені пояснення і рушаємо в Розділ 6."; }
+  else if (correct >= 4){ verdict = "Непогано, повтори 📘"; advice = "Перечитай про build vs publish і про передачу артефактів між job-ами."; }
+  else { verdict = "Варто перечитати розділ 🔁"; advice = "Артефакти — місток до деплою. Пробіжись по теорії ще раз."; }
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('advice').textContent = advice;
+  r.classList.add('show');
+  r.scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
+</body>
+</html>
