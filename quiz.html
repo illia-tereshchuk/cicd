@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Final Quiz · CI/CD for .NET (64 questions)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6470;
+    --line:#e3e7ec; --brand:#2f6fed;
+    --ok:#1a7f4b; --ok-bg:#e7f6ee; --bad:#c02626; --bad-bg:#fdeaea; --chip:#eef1f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b2;
+      --line:#262c34; --brand:#5b8bff;
+      --ok:#4fd08a; --ok-bg:#12301f; --bad:#ff7b7b; --bad-bg:#331515; --chip:#222833;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px 16px;}
+  .wrap{max-width:780px;margin:0 auto;}
+  .kicker{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:700}
+  h1{font-size:26px;margin:6px 0 4px}
+  .sub{color:var(--muted);margin:0}
+  .bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:18px 0 6px;position:sticky;top:8px}
+  .bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .barlabel{font-size:13px;color:var(--muted)}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px 6px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .qnum{font-size:13px;color:var(--muted);font-weight:600}
+  .cat{font-size:11px;font-weight:700;color:var(--brand);background:var(--chip);border-radius:99px;padding:2px 9px}
+  .qtext{font-weight:650;margin:6px 0 12px;font-size:16.5px}
+  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:.9em}
+  .opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:var(--card);
+    border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;margin:7px 0;cursor:pointer;color:var(--ink);font:inherit;transition:.15s}
+  .opt:hover:not(:disabled){border-color:var(--brand)}
+  .opt:disabled{cursor:default}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+  .opt.correct .mk{border-color:var(--ok);background:var(--ok);color:#fff}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .mk{border-color:var(--bad);background:var(--bad);color:#fff}
+  .explain{font-size:14px;color:var(--muted);background:var(--chip);border-radius:10px;padding:9px 12px;margin:6px 0 12px;display:none}
+  .explain.show{display:block}
+  .explain b{color:var(--ink)}
+  .result{position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:20px;box-shadow:0 6px 20px rgba(0,0,0,.12);display:none}
+  .result.show{display:block}
+  .result h2{margin:0 0 4px;font-size:20px}
+  .result p{margin:0;color:var(--muted)}
+  .score{font-size:34px;font-weight:800;color:var(--brand)}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Final quiz</div>
+  <h1>CI/CD for .NET — everything</h1>
+  <p class="sub">Pick one answer; the explanation appears immediately. Options are shuffled.</p>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="barlabel"><span id="answered">0</span>/<span id="total">0</span> answered · correct: <span id="correct">0</span></div>
+  <main id="quiz"></main>
+  <div class="result" id="result">
+    <div class="score"><span id="finalScore">0</span>/<span id="total2">0</span></div>
+    <h2 id="verdict"></h2>
+    <p id="advice"></p>
+  </div>
+  <footer>learning/quiz-final.html · CI/CD for .NET course</footer>
+</div>
+<script>
+const QUESTIONS = [
+  {cat:"Basics", q:"What does CI stand for in \"CI/CD\"?", opts:["Continuous Integration","Code Inspection","Central Install","Continuous Iteration"], correct:0, ex:"CI = continuous integration: every change is automatically built and tested."},
+  {cat:"Basics", q:"What is the main goal of CI?", opts:["Catch bugs early by auto-building and testing every change","Automatically deploy to production","Generate documentation","Manage branches"], correct:0, ex:"CI is about fast feedback: a problem shows up in minutes."},
+  {cat:"Basics", q:"Continuous Delivery vs Continuous Deployment?", opts:["Delivery: a human triggers the final deploy; Deployment: automatic","They are the same","Delivery is automatic, Deployment manual","Deployment is only about databases"], correct:0, ex:"The difference is the final step: human click vs automatic."},
+  {cat:"Basics", q:"What is a pipeline?", opts:["A sequence of automated steps build→test→deploy","A list of branches","A cloud server","A type of runner"], correct:0, ex:"If a step fails, the pipeline stops."},
+  {cat:"Basics", q:"Where does GitHub look for workflow files?", opts:[".github/workflows/","the repo root",".git/workflows/","actions/"], correct:0, ex:"Strictly .github/workflows/. .git/ is Git's internal folder."},
+  {cat:"Actions", q:"How is nesting expressed in YAML?", opts:["By space indentation (tabs are forbidden)","By semicolons","By curly braces","It isn't"], correct:0, ex:"90% of beginner errors are a shifted indent."},
+  {cat:"Actions", q:"What does the `on:` section define?", opts:["The events that trigger the workflow","A list of dependencies","The workflow name","The runner OS"], correct:0, ex:"push, pull_request, workflow_dispatch, etc."},
+  {cat:"Actions", q:"In `pull_request: branches: [main]`, which branch is filtered?", opts:["The base branch (where the PR is targeted)","The PR source branch","All branches","The deploy branch"], correct:0, ex:"The filter is the base (merge target), not the source."},
+  {cat:"Actions", q:"The key `build:` under `jobs:` is...", opts:["A job id you make up yourself","A reserved keyword","A build command","A runner name"], correct:0, ex:"Arbitrary name; `needs` references it."},
+  {cat:"Actions", q:"Multiple jobs without `needs:` run...", opts:["In parallel","Sequentially top to bottom","In random order","One per day"], correct:0, ex:"Jobs are parallel by default."},
+  {cat:"Actions", q:"Steps within one job...", opts:["Run sequentially, sharing one filesystem","Run in parallel","Each on its own runner","Have no access to the code"], correct:0, ex:"That's why checkout→build→test works as a chain."},
+  {cat:"Actions", q:"`runs-on: ubuntu-latest` sets...", opts:["The runner (VM OS)","The .NET version","The job name","The trigger"], correct:0, ex:"A clean VM where steps execute."},
+  {cat:"Actions", q:"Difference between `uses:` and `run:`?", opts:["uses plugs in a prebuilt action; run executes a command","uses is for variables, run for secrets","They are identical","run plugs in an action"], correct:0, ex:"uses: actions/checkout; run: dotnet build."},
+  {cat:"Actions", q:"What is `@v4` in `actions/checkout@v4`?", opts:["A pinned action version (ref)","A retry count","A runner number","A .NET version"], correct:0, ex:"A moving major tag: latest 4.x without breaking changes."},
+  {cat:"Actions", q:"What is the `with:` block in a step for?", opts:["Passing input parameters to an action","Declaring job env vars","Pointing to the next step","Setting a timeout"], correct:0, ex:"E.g. dotnet-version for setup-dotnet."},
+  {cat:"Actions", q:"What does `actions/checkout` do?", opts:["Clones the repo code onto the runner","Installs .NET","Runs tests","Deploys"], correct:0, ex:"The runner starts empty — you must fetch the code."},
+  {cat:"Build", q:"What does `dotnet restore` do?", opts:["Downloads NuGet packages","Compiles to dll","Runs tests","Publishes"], correct:0, ex:"Pulls dependencies into ~/.nuget/packages."},
+  {cat:"Build", q:"What does `dotnet build` do?", opts:["Compiles code into .dll (bin/)","Only pulls packages","Formats the code","Makes a commit"], correct:0, ex:"It also restores unless --no-restore is given."},
+  {cat:"Build", q:"Release vs Debug?", opts:["Release is an optimized \"production\" build","Release disables tests","Debug is faster in prod","No difference"], correct:0, ex:"In CI build/test in the same configuration you ship."},
+  {cat:"Build", q:"Why `--no-restore` on build?", opts:["Restore already ran as a separate step","To skip compilation","To build without the SDK","To disable optimizations"], correct:0, ex:"Avoids redundant work; restore must come earlier."},
+  {cat:"Build", q:"What does `dotnet test --no-build` give you?", opts:["Reuse the existing build instead of rebuilding","Skip the tests","Build in Debug","Skip package restore"], correct:0, ex:"Faster when build already ran."},
+  {cat:"Cache", q:"What problem does NuGet caching solve?", opts:["Re-downloading packages from the internet every run","Tests not running","Cache compiles code","Checkout not working"], correct:0, ex:"The runner is clean each time — without cache CI is slow."},
+  {cat:"Cache", q:"Which folder is cached for .NET?", opts:["~/.nuget/packages","bin/","the whole codebase","log files"], correct:0, ex:"The global NuGet packages folder."},
+  {cat:"Cache", q:"Why `hashFiles('**/*.csproj')` in the cache key?", opts:["To refresh the cache when dependencies change","To encrypt the cache","To name the job","To pick the OS"], correct:0, ex:"Same hash -> cache hit; changed -> new cache."},
+  {cat:"Cache", q:"What are `restore-keys` for in actions/cache?", opts:["A partial-match fallback when no exact key exists","A list of secrets","To delete the cache","To set retention"], correct:0, ex:"A partial cache beats none."},
+  {cat:"Tests", q:"Main reason to run tests in CI?", opts:["Automatic checks on every change block a broken merge","Faster compilation","Smaller repo","Not needed"], correct:0, ex:"CI is an independent check on a clean environment."},
+  {cat:"Tests", q:"Where do tests live in .NET?", opts:["In a separate test project","In the same files as the code","In bin/","In .github/workflows/"], correct:0, ex:"A separate project referencing the main one."},
+  {cat:"Tests", q:"xUnit is...", opts:["A .NET test framework","A JavaScript framework","A Java framework","A language"], correct:0, ex:"Along with NUnit and MSTest — the .NET world."},
+  {cat:"Tests", q:"What happens to the job if a test fails?", opts:["Non-zero exit code -> red job","Nothing, still green","Auto-restart","Fails only with a flag"], correct:0, ex:"That's the core of CI: failure blocks the merge."},
+  {cat:"Tests", q:"`[Fact]` vs `[Theory]`?", opts:["Fact — one case; Theory — same test over multiple data sets","Identical","Fact for integration tests","Theory disables the test"], correct:0, ex:"Theory comes with [InlineData(...)]."},
+  {cat:"Tests", q:"Why make the tested type `public`?", opts:["internal types aren't visible from the test project","Otherwise it won't compile at all","public is faster","xUnit requires it"], correct:0, ex:"Or InternalsVisibleTo as an alternative."},
+  {cat:"Matrix", q:"What is `strategy: matrix`?", opts:["Running one job across several combinations in parallel","A list of secrets","A permissions matrix","A runner type"], correct:0, ex:"E.g. several OSes × .NET versions."},
+  {cat:"Matrix", q:"os:[ubuntu,windows] × dotnet:['8','10'] = how many jobs?", opts:["4","2","1","8"], correct:0, ex:"Cartesian product 2×2."},
+  {cat:"Artifacts", q:"`dotnet publish` vs `build`?", opts:["publish produces a self-contained deploy-ready folder","Identical","publish runs tests","build deploys"], correct:0, ex:"publish -o ./publish — ready to hand to a server."},
+  {cat:"Artifacts", q:"What is an artifact in CI?", opts:["Saved files of a run (download/pass along)","An error","A runner","A secret"], correct:0, ex:"E.g. the publish folder, a log, a zip."},
+  {cat:"Artifacts", q:"Why save the built artifact instead of rebuilding before deploy?", opts:["Deploy the exact tested binary (build once, deploy the same)","Save disk space","Won't compile without it","To skip tests"], correct:0, ex:"Rebuilding = risk of a different build."},
+  {cat:"Artifacts", q:"How to pass an artifact between jobs?", opts:["needs: + download-artifact","Auto-visible everywhere","Via cache","Copy manually"], correct:0, ex:"upload in build, download in deploy (needs: build)."},
+  {cat:"Artifacts", q:"Artifact vs cache?", opts:["Artifact is a deliberate output; cache is a transparent speed optimization","Identical","Cache can be downloaded, artifact can't","Artifact speeds up the build"], correct:0, ex:"Cache = packages; artifact = what you export as a result."},
+  {cat:"CD", q:"What does CD add on top of CI?", opts:["Delivers the tested artifact to an environment","Compiles code","Writes tests","Creates a repo"], correct:0, ex:"build→test→publish→deploy."},
+  {cat:"CD", q:"Where should you store passwords/tokens?", opts:["GitHub Secrets, via ${{ secrets.NAME }}","In the yaml","In the README","In the branch name"], correct:0, ex:"Masked in logs; cannot be read back."},
+  {cat:"CD", q:"What is an environment (e.g. production)?", opts:["A named deploy target with rules and secrets","An OS env var","A runner","A .NET version"], correct:0, ex:"Staging/production with their own protection rules."},
+  {cat:"CD", q:"Which environment rule implements \"Continuous Delivery\"?", opts:["Required reviewers — manual approval before deploy","cancel-in-progress","matrix","retention-days"], correct:0, ex:"The deploy waits for a human click."},
+  {cat:"CD", q:"What is GITHUB_TOKEN?", opts:["An automatic per-run token with least privilege","Your GitHub password","A database key","A secret you make manually"], correct:0, ex:"Its rights are narrowed with the permissions block."},
+  {cat:"CD", q:"What is the `permissions:` block for?", opts:["Narrowing GITHUB_TOKEN rights (least privilege)","A list of secrets","Choosing the OS","Enabling cache"], correct:0, ex:"Fewer rights — less damage if compromised."},
+  {cat:"CD", q:"Safest way for CI to authenticate to the cloud?", opts:["OIDC — short-lived tokens","Password in yaml","A shared password in the README","No authentication"], correct:0, ex:"A token for a few minutes; nothing long-lived stored."},
+  {cat:"CD", q:"How to trigger a deploy manually (a button)?", opts:["The `workflow_dispatch` trigger","Delete the jobs","Remove the runner","Add a matrix"], correct:0, ex:"A \"Run workflow\" button in the UI."},
+  {cat:"Best practices", q:"What do branch protection + required status checks give?", opts:["Block the merge until CI passes","Auto-deploy main","Delete branches","Speed up the build"], correct:0, ex:"Turns CI into a mandatory gate."},
+  {cat:"Best practices", q:"Why work via PRs instead of pushing straight to main?", opts:["Every change goes through CI and review","Push to main is impossible","So you skip tests","PRs are faster"], correct:0, ex:"The PR is the control point."},
+  {cat:"Security", q:"The `NU1903` warning means...", opts:["A vulnerable NuGet package","A syntax error","No tests","Old YAML"], correct:0, ex:"CI catches security holes in dependencies too."},
+  {cat:"Security", q:"How to override a vulnerable transitive dependency?", opts:["A direct PackageReference to a patched version","Delete the tests","Change the runner","Comment out the warning"], correct:0, ex:"A direct reference outranks the transitive one."},
+  {cat:"Security", q:"Why pin action versions + use Dependabot?", opts:["Supply-chain safety + controlled updates","Shorter yaml","A YAML requirement","To disable cache"], correct:0, ex:"You run other people's code — keep control."},
+  {cat:"Best practices", q:"What does `concurrency` with `cancel-in-progress: true` do?", opts:["Cancels the previous unfinished run in the same group","Makes jobs sequential","Caches packages","Creates a matrix"], correct:0, ex:"For deploys use false instead (don't interrupt a rollout)."},
+  {cat:"Best practices", q:"Why set `timeout-minutes` on a job?", opts:["So a hung job doesn't burn minutes forever","Speed up tests","Set the .NET version","Keep artifacts longer"], correct:0, ex:"A safeguard against hangs."},
+  {cat:"Azure", q:"Which App Service tier is free?", opts:["Free F1","Standard S1","Premium P1v3","Isolated"], correct:0, ex:"F1: shared, 60 CPU-min/day, no Always On."},
+  {cat:"Azure", q:"If Basic authentication is OFF on a Web App...", opts:["The publish profile can't log in (deploy fails)","The app won't start","Tests fail","Nothing"], correct:0, ex:"Enable it in Configuration → General."},
+  {cat:"Azure", q:"Why does `UseHttpsRedirection` break the app on App Service?", opts:["Behind the reverse proxy it causes a redirect loop","It disables HTTPS entirely","It slows startup","It breaks tests"], correct:0, ex:"Keep it Development-only; enforce HTTPS via the HTTPS Only toggle."},
+  {cat:"Azure", q:"Why does the root `/` of your API return 404?", opts:["There's no route there — test /weatherforecast","The app is down","A deploy error","No HTTPS"], correct:0, ex:"Only /weatherforecast is mapped."},
+  {cat:"Azure", q:"What is the Azure \"unique default hostname\"?", opts:["A domain with a random token + region (anti-takeover)","Your custom domain","A runner name","The subscription name"], correct:0, ex:"Take it from Overview → Default domain; don't guess <app>.azurewebsites.net."},
+  {cat:"Azure", q:"Where do you find the version of `azure/webapps-deploy@v3`?", opts:["In the action's GitHub repo (Releases/Tags)","In the Azure portal","In the .csproj","In the publish profile"], correct:0, ex:"The action lives on GitHub; the portal only generates a starter workflow in Deployment Center."},
+  {cat:"git/gh", q:"What does `git push -u` do?", opts:["Links the local branch to the remote one (set-upstream)","Force-pushes","Deletes a branch","Creates a tag"], correct:0, ex:"Afterwards you can just run `git push`."},
+  {cat:"git/gh", q:"After `gh auth login`, where does `git push` over https get access?", opts:["gh acts as a git credential helper and provides the token","From an SSH key","From a password in yaml","From .gitignore"], correct:0, ex:"gh auth status / credential.helper show the link."},
+  {cat:"git/gh", q:"What does `gh secret list` show?", opts:["Only the secret names (values are hidden)","The secret values","Deploy logs","Branches"], correct:0, ex:"Secrets are write-only: they can't be read back."},
+  {cat:"git/gh", q:"How to check out someone's PR locally to test it?", opts:["gh pr checkout <number>","git delete pr","gh pr merge","git clone --pr"], correct:0, ex:"Fetches the PR branch and switches to it."},
+  {cat:"git/gh", q:"How to temporarily shelve uncommitted changes before switching?", opts:["git stash (then git stash pop)","git push -f","git reset --hard","git rm"], correct:0, ex:"Or commit on your own branch — so nothing is lost."}
+];
+
+const quiz = document.getElementById('quiz');
+const total = QUESTIONS.length;
+document.getElementById('total').textContent = total;
+document.getElementById('total2').textContent = total;
+let answered = 0, correct = 0;
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+QUESTIONS.forEach((item, qi) => {
+  const card = document.createElement('div');
+  card.className = 'q';
+  card.innerHTML = `<div class="top"><span class="qnum">Question ${qi+1} of ${total}</span><span class="cat">${item.cat}</span></div>
+                    <div class="qtext">${item.q}</div>`;
+  const letters = ['A','B','C','D'];
+  const options = shuffle(item.opts.map((text,i)=>({text, correct:i===item.correct})));
+  options.forEach((opt, oi) => {
+    const btn = document.createElement('button');
+    btn.className='opt';
+    btn.dataset.correct = opt.correct ? "1":"0";
+    btn.innerHTML = `<span class="mk">${letters[oi]}</span><span>${opt.text}</span>`;
+    btn.onclick = () => choose(card, opt.correct, btn);
+    card.appendChild(btn);
+  });
+  const ex = document.createElement('div');
+  ex.className='explain';
+  ex.innerHTML = item.ex;
+  card.appendChild(ex);
+  quiz.appendChild(card);
+});
+
+function choose(card, isCorrect, btn){
+  if (card.dataset.done) return;
+  card.dataset.done="1";
+  answered++;
+  card.querySelectorAll('.opt').forEach(b=>{ b.disabled=true; if(b.dataset.correct==="1") b.classList.add('correct'); });
+  if (isCorrect) correct++; else btn.classList.add('wrong');
+  card.querySelector('.explain').classList.add('show');
+  document.getElementById('answered').textContent = answered;
+  document.getElementById('correct').textContent = correct;
+  document.getElementById('fill').style.width = (answered/total*100)+'%';
+  if (answered === total) finish();
+}
+
+function finish(){
+  const r = document.getElementById('result');
+  document.getElementById('finalScore').textContent = correct;
+  const pct = Math.round(correct/total*100);
+  let verdict, advice;
+  if (pct===100){ verdict="Flawless! 🏆"; advice="A perfect score across the whole course. You can talk CI/CD with confidence."; }
+  else if (pct>=85){ verdict="Excellent! 🎯"; advice=`${pct}% — strong. Review the red explanations and the material is yours.`; }
+  else if (pct>=70){ verdict="Good! 👍"; advice=`${pct}%. Revisit the topics where you slipped — they're shown by category.`; }
+  else if (pct>=50){ verdict="Solid base, review needed 📘"; advice=`${pct}%. Go back to the README reference and the weak categories.`; }
+  else { verdict="Worth another pass 🔁"; advice=`${pct}%. That's fine — re-read the material and try again.`; }
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('advice').textContent = advice;
+  r.classList.add('show');
+  r.scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
+</body>
+</html>

@@ -1,93 +1,96 @@
-name: CI
+name: CI                       # Display name of this workflow (shown in the Actions tab).
 
-on:
-  push:                       # будь-яка гілка -> тести (build)
-  pull_request:
-    branches: [ main ]        # PR у main -> тести + деплой у staging
+on:                            # TRIGGERS: which events start this workflow.
+  push:                        #   "push" with no branch filter -> runs on a push to ANY branch.
+  pull_request:                #   "pull_request" -> when a PR is opened/updated.
+    branches: [ main ]         #     Filter: only PRs targeting the main branch (the base branch).
 
-# Найменші привілеї за замовчуванням для GITHUB_TOKEN
-permissions:
-  contents: read
+permissions:                   # Permissions of the automatic GITHUB_TOKEN (least privilege).
+  contents: read               #   Only allow READING the repo contents; nothing else.
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+jobs:                          # All jobs of this workflow are listed here.
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
+  build:                       # First job (id chosen by us). Builds and tests the app.
+    runs-on: ubuntu-latest     #   Runner: a fresh GitHub-hosted Ubuntu VM.
+    steps:                     #   Steps run sequentially on the same runner.
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+      - name: Checkout code                 # Step 1: human-readable label.
+        uses: actions/checkout@v4           #   Prebuilt action: clones the repo onto the runner. @v4 = pinned version.
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Setup .NET                    # Step 2.
+        uses: actions/setup-dotnet@v4       #   Action that installs the .NET SDK on the runner.
+        with:                               #   "with" = inputs for this action.
+          dotnet-version: '10.0.x'          #     Which version to install; '10.0.x' = latest patch of the 10.0 line.
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      - name: Cache NuGet packages          # Step 3.
+        uses: actions/cache@v4              #   Caching action (speeds up CI between runs).
+        with:                               #   Its inputs:
+          path: ~/.nuget/packages           #     WHAT to cache — the global NuGet packages folder.
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}   # Cache key: OS + hash of all .csproj (dependency fingerprint).
+          restore-keys: |                   #     Fallback keys (partial match); "|" = multi-line block.
+            ${{ runner.os }}-nuget-         #       If no exact key, reuse the newest cache with this prefix.
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release
+      - name: Restore dependencies          # Step 4.
+        run: dotnet restore                 #   "run" = shell command: downloads the project's NuGet packages.
 
-      - name: Publish
-        run: dotnet publish src/Api/Api.csproj --no-build --configuration Release -o ./publish
+      - name: Build                         # Step 5.
+        run: dotnet build --no-restore --configuration Release   # Compile in Release; --no-restore because restore already ran.
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-${{ github.run_number }}
-          path: ./publish
-          retention-days: 7
+      - name: Test                          # Step 6.
+        run: dotnet test --no-build --configuration Release      # Run tests; --no-build reuses the build. Failure -> red job.
 
-  # PR у main -> деплой у STAGING (глянути зміну наживо ДО мерджу)
-  deploy-staging:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    environment:
-      name: staging
-      url: https://cicd-stage-a2b0a2huc2hwcea2.polandcentral-01.azurewebsites.net/weatherforecast
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-${{ github.run_number }}
-          path: ./publish
+      - name: Publish                       # Step 7.
+        run: dotnet publish src/Api/Api.csproj --no-build --configuration Release -o ./publish  # Produce a deploy-ready folder.
 
-      - name: Deploy to Azure (staging)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: cicd-stage
-          publish-profile: ${{ secrets.STAGE }}
-          package: ./publish
+      - name: Upload artifact               # Step 8.
+        uses: actions/upload-artifact@v4    #   Action: saves files as a run artifact.
+        with:                               #   Its inputs:
+          name: api-${{ github.run_number }}  #   Artifact name: "api-" + run number (unique counter).
+          path: ./publish                   #     WHAT to save — the publish folder.
+          retention-days: 7                 #     How many days to keep it.
 
-  # Мердж (push) у main -> деплой у PRODUCTION
-  deploy-prod:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://cicd-deploy-cpa0a4g9ckgae3g8.polandcentral-01.azurewebsites.net/weatherforecast
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-${{ github.run_number }}
-          path: ./publish
+  # PR to main -> deploy to STAGING (preview the change live BEFORE merging)
+  deploy-staging:                # Second job: deploy to staging.
+    needs: build                 #   Dependency: waits for build and only runs if build succeeded.
+    runs-on: ubuntu-latest       #   A fresh runner (separate from build!).
+    if: github.event_name == 'pull_request'   # Condition: run ONLY when the event is a pull_request.
+    environment:                 #   Bind to a named GitHub environment.
+      name: staging              #     Environment name (Settings -> Environments).
+      url: https://cicd-stage-a2b0a2huc2hwcea2.polandcentral-01.azurewebsites.net/weatherforecast  # Clickable URL in the UI (informational).
+    steps:                       #   Steps of this job:
 
-      - name: Deploy to Azure (production)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: cicd-deploy
-          publish-profile: ${{ secrets.DEPLOY }}
-          package: ./publish
+      - name: Download artifact             # Step 1.
+        uses: actions/download-artifact@v4  #   Action: pulls the saved artifact onto this runner.
+        with:                               #   Its inputs:
+          name: api-${{ github.run_number }}  #   Same name build uploaded (same run -> same number).
+          path: ./publish                   #     Where to extract it.
+
+      - name: Deploy to Azure (staging)     # Step 2.
+        uses: azure/webapps-deploy@v3       #   Official Azure action to deploy to App Service. @v3 = version.
+        with:                               #   Its inputs:
+          app-name: cicd-stage              #     Which Web App to deploy to (staging).
+          publish-profile: ${{ secrets.STAGE }}   # Credentials from the STAGE secret (masked in logs).
+          package: ./publish                #     WHAT to deploy — the downloaded artifact folder.
+
+  # Merge (push) to main -> deploy to PRODUCTION
+  deploy-prod:                   # Third job: deploy to production.
+    needs: build                 #   Waits for build; only runs if it succeeded.
+    runs-on: ubuntu-latest       #   A fresh runner.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'   # Condition: push AND branch is main (i.e. after a merge).
+    environment:                 #   Named environment:
+      name: production           #     Name — production.
+      url: https://cicd-deploy-cpa0a4g9ckgae3g8.polandcentral-01.azurewebsites.net/weatherforecast  # Live prod URL (informational).
+    steps:                       #   Steps:
+
+      - name: Download artifact             # Step 1.
+        uses: actions/download-artifact@v4  #   Pull the artifact onto the runner.
+        with:                               #   Inputs:
+          name: api-${{ github.run_number }}  #   Same artifact name from build.
+          path: ./publish                   #     Where to extract it.
+
+      - name: Deploy to Azure (production)  # Step 2.
+        uses: azure/webapps-deploy@v3       #   Azure deploy action.
+        with:                               #   Inputs:
+          app-name: cicd-deploy             #     Production Web App.
+          publish-profile: ${{ secrets.DEPLOY }}   # Credentials from the DEPLOY secret.
+          package: ./publish                #     WHAT to deploy — ./publish.
