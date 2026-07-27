@@ -27,8 +27,8 @@ jobs:                          # All jobs of this workflow are listed here.
         with:                               #   Its inputs:
           path: ~/.nuget/packages           #     WHAT to cache — the global NuGet packages folder.
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}   # Cache key: OS + hash of all .csproj (dependency fingerprint).
-          restore-keys: |                   #     Fallback keys (partial match); "|" = multi-line block.
-            ${{ runner.os }}-nuget-         #       If no exact key, reuse the newest cache with this prefix.
+          restore-keys: |                   # Fallback: on a miss, reuse the newest cache with this prefix.
+            ${{ runner.os }}-nuget-
 
       - name: Restore dependencies          # Step 4.
         run: dotnet restore                 #   "run" = shell command: downloads the project's NuGet packages.
