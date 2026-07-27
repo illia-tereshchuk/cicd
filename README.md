@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/illia-tereshchuk/dotnet-cicd-azure-cheatsheet/actions/workflows/ci.yml/badge.svg)](https://github.com/illia-tereshchuk/dotnet-cicd-azure-cheatsheet/actions/workflows/ci.yml)
 
-Minimal **ASP.NET Core Web API** wired to a full **CI/CD pipeline** with **GitHub Actions**.
+**ASP.NET Core Web API** wired to a full **CI/CD pipeline** with **GitHub Actions**.
 
 Deployed to **Azure App Service** — staging on PR, production on merge.
 
@@ -16,7 +16,7 @@ The API exposes `GET /weatherforecast` (root `/` returns 404 by design).
 
 ## How CI/CD works here
 - **Triggers** — `push` (any branch → tests) and `pull_request` to `main`.
-- **Jobs** — `build` (restore → build → test → publish → upload artifact), then `deploy-staging` (on PR) and `deploy-prod` (on merge).
+- **Jobs** — `build`, then `deploy-staging` (on PR) and `deploy-prod` (on merge).
 - **Environments** — `staging` and `production` (GitHub Settings → Environments); can add required reviewers, etc.
 - **Secrets** — publish profiles stored as `STAGE` / `DEPLOY` (never hard-coded); `permissions: contents: read` for `GITHUB_TOKEN`.
 
