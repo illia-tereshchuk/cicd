@@ -1,4 +1,4 @@
-# .NET CI/CD + Azure — Cheatsheet
+# .NET CI/CD + Azure
 
 [![CI](https://github.com/illia-tereshchuk/dotnet-cicd-azure-cheatsheet/actions/workflows/ci.yml/badge.svg)](https://github.com/illia-tereshchuk/dotnet-cicd-azure-cheatsheet/actions/workflows/ci.yml)
 
